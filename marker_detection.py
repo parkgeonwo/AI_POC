@@ -167,112 +167,119 @@
 import numpy as np
 import cv2
 
+upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document.jpg", cv2.IMREAD_GRAYSCALE)
+# src = cv2.resize( src, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 
-class Image_processing():
-    def __init__(self, path):
-        self.upload_image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        # src = cv2.resize( src, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
+ret, binary_image = cv2.threshold(upload_image, 230, 255, cv2.THRESH_BINARY)   # 이진화
 
-        ret, self.binary_image = cv2.threshold(self.upload_image, 230, 255, cv2.THRESH_BINARY)   # 이진화
-
-        self.gblur_image = cv2.GaussianBlur(self.binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능
-        # image_binary = cv2.bilateralFilter(image_binary, 9,75,75)
-        # image_binary = cv2.edgePreservingFilter(image_binary, flags=1, sigma_s=45, sigma_r=0.2)
-        self.canny_image = cv2.Canny(self.gblur_image, 75,200, True)
-
-    def findcontours(self, image, sort_box_index):
-        cnts, hierarchy = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
-        cnts = sorted(cnts, key=cv2.contourArea, reverse=True) # contourArea : contour가 그린 면적
-
-        rect = cv2.minAreaRect(cnts[sort_box_index])  # largest 중 하나를 직사각형 형태로 return = (c_x,c_y) / (width, height) / angle of rotation
-        r = cv2.boxPoints(rect)
-        box = np.int0(r)
-
-        self.upload_image = cv2.cvtColor(self.upload_image, cv2.COLOR_GRAY2BGR)
-        cv2.drawContours(self.upload_image, [box], -1, (255,0,0), 2)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
-
-        # # 4개의 점 다른색으로 표시
-        boxes = [tuple(i) for i in box]
-        cv2.circle(self.upload_image, boxes[0], 1, (0, 0, 0), 5)   # 검  # boxes[0] -> x1, y1 , 좌상단
-        cv2.circle(self.upload_image, boxes[1], 1, (255, 0, 0), 5) # 파  # boxes[1] -> x2, y1 , 우상단
-        cv2.circle(self.upload_image, boxes[2], 1, (0, 255, 0), 5) # 녹  # boxes[2] -> x2, y2 , 우하단
-        cv2.circle(self.upload_image, boxes[3], 1, (0, 0, 255), 5) # 적  # boxes[3] -> x1, y2 , 좌하단
-
-        W = rect[1][1]       # 90도 돌아간거로 인식되서 rect[1][1]이 width
-        H = rect[1][0]
-
-        pts1 = np.float32([ [boxes[0]], [boxes[3]], [boxes[1]], [boxes[2]] ])   # 좌상, 좌하, 우상, 우하
-        pts2 = np.float32([ [0,0], [0,H], [W,0], [W,H] ])
-
-        M = cv2.getPerspectiveTransform(pts1, pts2)
-
-        perspective_image = cv2.warpPerspective(self.binary_image, M, (int(W),int(H)))
-
-        return int(W),int(H), perspective_image
-
-    def save_ocr_image(self, W, H, perspective_image, path):
-        left_col_x1 = int(W*0.157)
-        left_col_x2 = int(W*0.528)
-        col_y1 = int(H*0.182)
-        row_height = 45
-        row_interval = 3
-
-        right_col_x1 = int(W*0.664)
-        right_col_x1_1 = int(W*0.791)
-        right_col_x1_2 = int(W*0.87)
-        right_col_x2 = int(W*0.998)
-
-        cv2.imshow("perspective_image",perspective_image)
-
-        for i in range(0,6):
-            if i in [3,5]:
-                x1, y1 = left_col_x1, col_y1 + row_height *i + row_interval *i
-                x2, y2 = right_col_x2, col_y1 + row_height *(i+1) + row_interval *i
-                crop_img = perspective_image[y1:y2, x1:x2]
-                cv2.imshow("crop_img_%d" %(i), crop_img)
-                # cv2.imshow("perspective_image",perspective_image)
-                cv2.waitKey(0)
-            else:
-                x1, y1 = left_col_x1, col_y1 + row_height *i + row_interval *i
-                x2, y2 = left_col_x2, col_y1 + row_height *(i+1) + row_interval *i
-                crop_img = perspective_image[y1:y2, x1:x2]
-                cv2.imshow("crop_img_%d" %(i), crop_img)
-                cv2.waitKey(0)
-
-        for i in range(0,6):
-            if i == 0:
-                x1, y1 = right_col_x1, col_y1 + row_height *i + row_interval *i
-                x2, y2 = right_col_x1_1, col_y1 + row_height *(i+1) + row_interval *i
-                crop_img = perspective_image[y1:y2, x1:x2]
-                cv2.imshow("crop_img_%d" %(i+6), crop_img)
-                cv2.waitKey(0)
-            elif i == 1:
-                x1, y1 = right_col_x1_2, col_y1 + row_height *(i-1) + row_interval *(i-1)
-                x2, y2 = right_col_x2, col_y1 + row_height *(i) + row_interval *(i-1)
-                crop_img = perspective_image[y1:y2, x1:x2]
-                cv2.imshow("crop_img_%d" %(i+6), crop_img)
-                cv2.waitKey(0)
-            elif i in [2,3,5]:
-                x1, y1 = right_col_x1, col_y1 + row_height *(i-1) + row_interval *(i-1)
-                x2, y2 = right_col_x2, col_y1 + row_height *(i) + row_interval *(i-1)
-                crop_img = perspective_image[y1:y2, x1:x2]
-                if i == 5:
-                    cv2.imshow("crop_img_%d" %(i+5), crop_img)
-                    cv2.waitKey(0)
-                else:
-                    cv2.imshow("crop_img_%d" %(i+6), crop_img)
-                    cv2.waitKey(0)
+gblur_image = cv2.GaussianBlur(binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능
+# image_binary = cv2.bilateralFilter(image_binary, 9,75,75)
+# image_binary = cv2.edgePreservingFilter(image_binary, flags=1, sigma_s=45, sigma_r=0.2)
+canny_image = cv2.Canny(gblur_image, 75,200, True)
 
 
-image = Image_processing(path = "./document/car_document.jpg")
+cnts, hierarchy = cv2.findContours(canny_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
+cnts = sorted(cnts, key=cv2.contourArea, reverse=True) # contourArea : contour가 그린 면적
 
-W, H, perspective_image = image.findcontours(image.canny_image, 0)
+rect = cv2.minAreaRect(cnts[0])  # largest 중 하나를 직사각형 형태로 return = (c_x,c_y) / (width, height) / angle of rotation
+r = cv2.boxPoints(rect)
+box = np.int0(r)
 
-image.save_ocr_image(W, H, perspective_image, path="./")
+upload_image = cv2.cvtColor(upload_image, cv2.COLOR_GRAY2BGR)
+cv2.drawContours(upload_image, [box], -1, (255,0,0), 2)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
 
-cv2.imshow("image", image.upload_image)
-cv2.imshow("image2", image.binary_image)
-cv2.imshow("image3", image.canny_image)
+# # 4개의 점 다른색으로 표시
+boxes = [tuple(i) for i in box]
+cv2.circle(upload_image, boxes[0], 1, (0, 0, 0), 5)   # 검  # boxes[0] -> x1, y1 , 좌상단
+cv2.circle(upload_image, boxes[1], 1, (255, 0, 0), 5) # 파  # boxes[1] -> x2, y1 , 우상단
+cv2.circle(upload_image, boxes[2], 1, (0, 255, 0), 5) # 녹  # boxes[2] -> x2, y2 , 우하단
+cv2.circle(upload_image, boxes[3], 1, (0, 0, 255), 5) # 적  # boxes[3] -> x1, y2 , 좌하단
+
+W = rect[1][1]       # 90도 돌아간거로 인식되서 rect[1][1]이 width
+H = rect[1][0]
+
+pts1 = np.float32([ [boxes[0]], [boxes[3]], [boxes[1]], [boxes[2]] ])   # 좌상, 좌하, 우상, 우하
+pts2 = np.float32([ [0,0], [0,H], [W,0], [W,H] ])
+
+M = cv2.getPerspectiveTransform(pts1, pts2)
+
+perspective_image = cv2.warpPerspective(binary_image, M, (int(W),int(H)))
+ 
+# print(W, H)     # 1173, 742
+
+left_col_x1 = int(W*0.149)          # 175 / 1173     # 왼쪽 col의 x1
+left_col_x2 = int(W*0.469)         # 546 / 1173      # 왼쪽 col의 x2
+col_y1 = int(H*0.171)           # 127 / 742          # 왼쪽 상단의 y1
+col_y2 = int(H*0.233)               # 173 / 742      # 왼쪽 상단의 y2
+row_height = col_y2 - col_y1                         # 한칸의 높이
+row_interval = int(H*0.00539)                         # 칸사이의 간격
+
+print(row_height, row_interval)
+
+right_col_x1 = int(W*0.645)       # 756 / 1173       # 오른쪽 1번째 col의 x1
+right_col_x1_1 = int(W*0.796)     # 934 / 1173       # 오른쪽 1번째 col의 x2
+right_col_x1_2 = int(W*0.869)      # 1019 / 1173     # 오른쪽 2번째 col의 x1
+right_col_x2 = int(W*0.995)       # 1167 / 1173      # 오른쪽 2번째 col의 x2
+
+upper_left_x1 = int(W*0.034)      # 40 / 1173       # 표 상단 자동차 등록번호 x1
+upper_right_x1 = int(W*0.739)      # 867 / 1173     # 표 상단 날짜 x1
+
+upper_y1 = int(H*0.121)      #  90 / 742         # 표 상단 자동차 등록번호 / 날짜 y1
+upper_y2 = int(H*0.162)      #  120 / 742        # 표 상단 자동차 등록번호 / 날짜 y2
+
+cv2.imshow("perspective_image",perspective_image)
+
+# 자동차 등록증 번호
+crop_img = perspective_image[upper_y1:upper_y2, upper_left_x1:left_col_x2]
+cv2.imshow("crop_img_1", crop_img)
+
+# 날짜
+crop_img = perspective_image[upper_y1:upper_y2, upper_right_x1:right_col_x2]
+cv2.imshow("crop_img_2", crop_img)
+
+for i in range(0,6):     # 자동차등록번호 -> 주소
+    if i in [3,5]:
+        x1, y1 = left_col_x1, col_y1 + row_height *i + row_interval *i
+        x2, y2 = right_col_x2, col_y1 + row_height *(i+1) + row_interval *i
+        crop_img = perspective_image[y1:y2, x1:x2]
+        cv2.imshow("crop_img_%d" %(i+3), crop_img)
+        # cv2.imshow("perspective_image",perspective_image)
+        cv2.waitKey(0)
+    else:
+        x1, y1 = left_col_x1, col_y1 + row_height *i + row_interval *i
+        x2, y2 = left_col_x2, col_y1 + row_height *(i+1) + row_interval *i
+        crop_img = perspective_image[y1:y2, x1:x2]
+        cv2.imshow("crop_img_%d" %(i+3), crop_img)
+        cv2.waitKey(0)
+
+for i in range(0,6):        # 차종 -> 주민등록번호 -> 용도
+    if i == 0:
+        x1, y1 = right_col_x1, col_y1 + row_height *i + row_interval *i
+        x2, y2 = right_col_x1_1, col_y1 + row_height *(i+1) + row_interval *i
+        crop_img = perspective_image[y1:y2, x1:x2]
+        cv2.imshow("crop_img_%d" %(i+9), crop_img)
+        cv2.waitKey(0)
+    elif i == 1:
+        x1, y1 = right_col_x1_2, col_y1 + row_height *(i-1) + row_interval *(i-1)
+        x2, y2 = right_col_x2, col_y1 + row_height *(i) + row_interval *(i-1)
+        crop_img = perspective_image[y1:y2, x1:x2]
+        cv2.imshow("crop_img_%d" %(i+9), crop_img)
+        cv2.waitKey(0)
+    elif i in [2,3,5]:
+        x1, y1 = right_col_x1, col_y1 + row_height *(i-1) + row_interval *(i-1)
+        x2, y2 = right_col_x2, col_y1 + row_height *(i) + row_interval *(i-1)
+        crop_img = perspective_image[y1:y2, x1:x2]
+        if i == 5:
+            cv2.imshow("crop_img_%d" %(i+8), crop_img)
+            cv2.waitKey(0)
+        else:
+            cv2.imshow("crop_img_%d" %(i+9), crop_img)
+            cv2.waitKey(0)
+
+
+# cv2.imshow("image", image.upload_image)
+# cv2.imshow("image2", image.binary_image)
+# cv2.imshow("image3", image.canny_image)
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
@@ -280,8 +287,12 @@ cv2.destroyAllWindows()
 
 #### ocr list
 
-# 자동차 등록증 번호 v / 최초등록일 v / 자동차등록번호 v / 차종 v / 용도 v / 차명 v / 형식 및 모델연도 v / 차대번호 v / 원동기형식 v / 사용본거지 v
-# 성명(명칭) v / 주민(법인)등록번호 v / 주소 v / 제원관리번호 v / 길이 v / 너비 v / 높이 v / 총중량 v / 배기량 v / 정격출력 v / 승차정원 v / 최대적재량 v / 기통수 v / 연료의 종류 v
+# 자동차 등록증 번호 v / 최초등록일 v / 자동차등록번호  / 차종  / 용도  / 차명  / 형식 및 모델연도  / 차대번호  / 원동기형식  / 사용본거지 
+# 성명(명칭)  / 주민(법인)등록번호  / 주소 
+
+# 제원관리번호  / 길이  / 너비  / 높이  / 총중량  / 배기량  / 정격출력  / 승차정원  / 최대적재량  / 기통수  / 연료의 종류 
+
+
 
 ### 마스킹
 

@@ -5,7 +5,7 @@ import math
 ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
 
 upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document3.jpg", cv2.IMREAD_GRAYSCALE)
-# upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
+upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 frame_height,frame_width = upload_image.shape
 
 ret, binary_image = cv2.threshold(upload_image, 240, 255, cv2.THRESH_BINARY)   # 이진화
@@ -124,7 +124,9 @@ elif n == 1:
 for j in range(len(height_list)):
     rect_list2 = [rect_list[i] for i in range(len(rect_list)) if rect_list[i][0][1] >= height_list[j] and rect_list[i][0][1] <= height_list[j+1] ]
     rect_list2.sort(key=lambda tup: tup[0][0])
-    print(rect_list2)
+    print(height_list[j])
+    print()
+    print()
     for i in rect_list2:
         rect_list3.append(i)
 

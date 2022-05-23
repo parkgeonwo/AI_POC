@@ -19,7 +19,7 @@ def biggest_contour(contours):
 
 ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
 
-upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document.jpg", cv2.IMREAD_GRAYSCALE)
+upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document3.jpg", cv2.IMREAD_GRAYSCALE)
 # upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 frame_height,frame_width = upload_image.shape
 
@@ -39,7 +39,7 @@ upload_image = cv2.cvtColor(upload_image, cv2.COLOR_GRAY2BGR)
 
 ######## rect_list에 cnts를 좌상단->우하단 순서로 만들기위해서 좌표를 담아주고 정렬
 
-n = 3
+n = 2
 
 rect_list = []
 
@@ -103,7 +103,7 @@ for k in range(n):
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    print(max_width,max_height)
+
 
 
 
@@ -184,8 +184,8 @@ for k in range(n):
 
             OCR_crop_image = crop_image2[ box2[1][1] : box2[1][1] + int(H) , box2[1][0] : box2[1][0] + int(W) ]
             cv2.imshow("OCR_crop_image_{}".format(image_number), OCR_crop_image)
+            # cv2.imwrite("./example/OCR_crop_image_{}.png".format(image_number), OCR_crop_image)
             image_number += 1
-
 
         cv2.waitKey(0)
         cv2.destroyAllWindows()

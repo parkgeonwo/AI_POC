@@ -19,7 +19,9 @@ def biggest_contour(contours):
 
 ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
 
-upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document3.jpg", cv2.IMREAD_GRAYSCALE)
+upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document.jpg")
+upload_image = cv2.cvtColor(upload_image, cv2.COLOR_BGR2GRAY)
+
 # upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 frame_height,frame_width = upload_image.shape
 
@@ -34,14 +36,14 @@ canny_image = cv2.Canny(gblur_image, 75,200, True)
 cnts, hierarchy = cv2.findContours(canny_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
 cnts = sorted(cnts, key=cv2.contourArea, reverse=True) # contourArea : contour가 그린 면적
 
-upload_image = cv2.cvtColor(upload_image, cv2.COLOR_GRAY2BGR)
-
 
 ######## rect_list에 cnts를 좌상단->우하단 순서로 만들기위해서 좌표를 담아주고 정렬
 
-n = 2
+n = 3
 
 rect_list = []
+
+upload_image = cv2.cvtColor(upload_image, cv2.COLOR_GRAY2BGR)
 
 for i in range(n):
     biggest = biggest_contour(cnts[i:])
@@ -78,6 +80,7 @@ for j in range(len(height_list)-1):
     for i in rect_list2:
         rect_list3.append(i)
 
+
 ################## 각 좌표에따라 원근변환
 
 for k in range(n):
@@ -101,8 +104,6 @@ for k in range(n):
     cv2.imshow("upload_image", upload_image)
     cv2.imshow("crop_image", crop_image)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
 
 

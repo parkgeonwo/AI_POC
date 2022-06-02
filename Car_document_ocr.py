@@ -1,8 +1,10 @@
+import easyocr
+import pytesseract
 import cv2
 import numpy as np
+import pandas as pd
 
-
-class Box_extract():
+class OCR():
     def __init__(self,upload_image_path):
 
         ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
@@ -17,6 +19,12 @@ class Box_extract():
         self.gblur_image = cv2.GaussianBlur(self.binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능
         self.canny_image = cv2.Canny(self.gblur_image, 75,200, True)
 
+        self.detect_box_num = 3
+        self.box_center_list = [[0, 0.5, 1],    # 가장 큰 box 3개
+                    [0, 0.1617, 0.2318, 0.3073, 0.3733, 0.442, 0.5054, 0.5701, 1 ],    # 가장 큰 박스 3개중 1번째 박스의 높이 리스트
+                    [0, 0.0513, 0.1099, 0.1526, 0.1954, 0.2357, 0.2772, 0.3541, 0.419,1 ],   # 가장 큰 박스 3개중 2번째 박스의 높이 리스트
+                    None ]  # 가장 큰 박스 3개중 3번째 박스의 높이 리스트 
+
     def biggest_contour(self, contours):
         biggest = np.array([])
         max_area = 0
@@ -30,19 +38,21 @@ class Box_extract():
                     max_area = area
         return biggest
 
-    def detect_box(self, processed_image, detect_box_num, box_center_list, show_image = False):
+    def crop_image_save(self, save_path, show_image = False ):
+        
+        self.save_path = save_path
+        self.processed_image = self.canny_image
 
         ############### 큰박스 3개 검출
-        cnts, hierarchy = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
+        cnts, hierarchy = cv2.findContours(self.processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
         cnts = sorted(cnts, key=cv2.contourArea, reverse=True) # contourArea : contour가 그린 면적
-
 
         ######## rect_list에 cnts를 좌상단->우하단 순서로 만들기위해서 좌표를 담아주고 정렬
 
         rect_list = []
         self.upload_image = cv2.cvtColor(self.upload_image_gray, cv2.COLOR_GRAY2BGR)
 
-        for i in range(detect_box_num):
+        for i in range(self.detect_box_num):
             contours = cnts[i:]
             biggest = self.biggest_contour(contours)
 
@@ -64,9 +74,9 @@ class Box_extract():
         rect_list2 = []
         rect_list3 = []
 
-        frame_height, frame_width = processed_image.shape
+        frame_height, frame_width = self.processed_image.shape
 
-        height_list = [ i*frame_height for i in box_center_list[0] ]
+        height_list = [ i*frame_height for i in self.box_center_list[0] ]
 
         for j in range(len(height_list)-1):
             rect_list2 = [rect_list[i] for i in range(len(rect_list)) if ((rect_list[i][0][1]+rect_list[i][3][1])/2) >= height_list[j] and ((rect_list[i][0][1]+rect_list[i][3][1])/2) <= height_list[j+1] ]
@@ -77,7 +87,7 @@ class Box_extract():
 
         ################## 각 좌표에따라 원근변환
 
-        for k in range(detect_box_num):
+        for k in range(self.detect_box_num):
             input_points2 = rect_list3[k]
 
             (top_left, top_right, bottom_left, bottom_right) = input_points2
@@ -117,11 +127,11 @@ class Box_extract():
             small_rect_list2 = []
             small_rect_list3 = []
 
-            for i in range(detect_box_num):
-                if box_center_list[k+1] == None:
+            for i in range(self.detect_box_num):
+                if self.box_center_list[k+1] == None:
                     sub_height_list = [0,0.5,1]
                 elif k == i:
-                    sub_height_list = [ j*max_height for j in box_center_list[k+1] ]
+                    sub_height_list = [ j*max_height for j in self.box_center_list[k+1] ]
 
 
 
@@ -133,8 +143,7 @@ class Box_extract():
 
             #################### m번 박스 추출
 
-            image_number = 0
-
+            image_num = 0
             for m in range(len(small_rect_list3)):
 
                 rect = small_rect_list3[m]
@@ -146,7 +155,7 @@ class Box_extract():
                     r[0], r[1], r[2], r[3] = copy_r[3],copy_r[0],copy_r[1],copy_r[2] 
 
                 box2 = np.int0(r)     # r을 int로 변환
-                
+
 
                 if rect[2] > 10:
                     W = rect[1][1]
@@ -160,14 +169,78 @@ class Box_extract():
                     cv2.drawContours(crop_image2, [box2], -1, (255,0,0), 2)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
 
                     OCR_crop_image = crop_image2[ box2[1][1] : box2[1][1] + int(H) , box2[1][0] : box2[1][0] + int(W) ]
+                    cv2.imwrite(self.save_path+"OCR_crop_image_{}_{}.png".format(k,image_num), OCR_crop_image)
 
                     if show_image == True:
                         cv2.imshow("crop_image2", crop_image2)
-                        cv2.imshow("OCR_crop_image_{}".format(image_number), OCR_crop_image)
-                        # cv2.imwrite("./example/OCR_crop_image_{}.png".format(image_number), OCR_crop_image)
-                    image_number += 1
+                        cv2.imshow("OCR_crop_image_{}".format(image_num), OCR_crop_image)
 
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                    image_num += 1
+
+        
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    def ocr_data_save(self,image_path,ocr_type = "tesseract"):
+
+        self.box1_ocr_num_list = [0,2,4,6,8,10,12,14,16,18,20,23 ]
+        self.box2_ocr_num_list = [1,3,5,7,9,11,13,15,17,19,21]
+        self.image_path = image_path
+        ocr_list = []
+
+        ### tesseeract ocr
+        if ocr_type == "tesseract":
+            for i in range(2):
+                if i == 0:
+                    box_num_list = self.box1_ocr_num_list
+                if i == 1:
+                    box_num_list = self.box2_ocr_num_list
+
+                for k in box_num_list:
+                    path = self.image_path + "OCR_crop_image_"+str(i)+"_"+str(k)+".png"
+                    crop_image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                    # rgb_image = cv2.cvtColor(crop_image, cv2.COLOR_BGR2RGB)
+
+                    ret, binary_image = cv2.threshold(crop_image, 210, 255, cv2.THRESH_BINARY)   # 이진화
+                    # cv2.imshow("b_image",binary_image)
+
+                    text = pytesseract.image_to_string(binary_image, lang="kor")
+                    # text = pytesseract.image_to_string(binary_image, config = config)
+
+                    result = text.strip()
+                    result = result.replace(" ","")
+                    result = result.replace("\n"," ")
+
+                    ocr_list.append(result)
+
+        ##### easyocr ocr
+        if ocr_type =="easyocr":
+            reader = easyocr.Reader(['ko', 'en'])
+
+            for i in range(2):
+                if i == 0:
+                    box_num_list = self.box1_ocr_num_list
+                if i == 1:
+                    box_num_list = self.box2_ocr_num_list
+
+                for k in box_num_list:
+                    path = self.image_path + "OCR_crop_image_"+str(i)+"_"+str(k)+".png"
+
+                    result = reader.readtext(path)
+                    ocr_word_list = []
+
+                    for j in result:
+                        ocr_word = j[1].strip()
+                        ocr_word = ocr_word.replace(" ","")
+                        ocr_word_list.append(ocr_word)
+                    
+                    ocr_list.append(ocr_word_list)
+
+        return ocr_list
+
+
+
+
 
 

@@ -9,6 +9,12 @@ class OCR():
 
         ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
         self.upload_image = cv2.imread(upload_image_path)
+
+        self.upload_image_height,self.upload_image_width, c = self.upload_image.shape
+
+        if self.upload_image_height < 1000 or self.upload_image_width < 1000:
+            self.upload_image = cv2.resize( self.upload_image, None, fx = 1.5, fy = 1.5, interpolation = cv2.INTER_LANCZOS4 )
+        
         self.upload_image_gray = cv2.cvtColor(self.upload_image, cv2.COLOR_BGR2GRAY)
 
         # upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
@@ -166,9 +172,9 @@ class OCR():
 
                 if W > 30 and H >30:
                     crop_image2 = cv2.cvtColor(crop_image, cv2.COLOR_GRAY2BGR)
-                    cv2.drawContours(crop_image2, [box2], -1, (255,0,0), 2)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
+                    cv2.drawContours(crop_image2, [box2], -1, (255,0,0), 1)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
 
-                    OCR_crop_image = crop_image2[ box2[1][1] : box2[1][1] + int(H) , box2[1][0] : box2[1][0] + int(W) ]
+                    OCR_crop_image = crop_image2[ box2[1][1]-3 : box2[1][1] + int(H)+3 , box2[1][0]-3 : box2[1][0] + int(W)+3 ]
                     cv2.imwrite(self.save_path+"OCR_crop_image_{}_{}.png".format(k,image_num), OCR_crop_image)
 
                     if show_image == True:
@@ -177,12 +183,10 @@ class OCR():
 
                     image_num += 1
 
-        
-
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def ocr_data_save(self,image_path,ocr_type = "tesseract"):
+    def ocr_data_save(self,image_path,ocr_type = "easyocr"):
 
         self.box1_ocr_num_list = [0,2,4,6,8,10,12,14,16,18,20,23 ]
         self.box2_ocr_num_list = [1,3,5,7,9,11,13,15,17,19,21]
@@ -203,10 +207,8 @@ class OCR():
                     # rgb_image = cv2.cvtColor(crop_image, cv2.COLOR_BGR2RGB)
 
                     ret, binary_image = cv2.threshold(crop_image, 210, 255, cv2.THRESH_BINARY)   # 이진화
-                    # cv2.imshow("b_image",binary_image)
 
-                    text = pytesseract.image_to_string(binary_image, lang="kor")
-                    # text = pytesseract.image_to_string(binary_image, config = config)
+                    text = pytesseract.image_to_string(binary_image, lang="kor+eng")
 
                     result = text.strip()
                     result = result.replace(" ","")
@@ -226,8 +228,11 @@ class OCR():
 
                 for k in box_num_list:
                     path = self.image_path + "OCR_crop_image_"+str(i)+"_"+str(k)+".png"
-
                     result = reader.readtext(path)
+                    # image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                    # ret, binary_image = cv2.threshold(image, 220, 255, cv2.THRESH_BINARY)   # 이진화
+                    # result = reader.readtext(binary_image)
+
                     ocr_word_list = []
 
                     for j in result:
@@ -239,6 +244,19 @@ class OCR():
 
         return ocr_list
 
+    def save_csv(self,data, save_csv = False):
+        self.ocr_columns = [ 'info' , '자동차등록번호' , '차종' ,'용도' ,'차명' ,'형식 및 모델연도' ,'차대번호' ,'원동기형식' ,
+                '사용본거지' ,'성명(명칭)' ,'주민(법인)등록번호' ,'주소' ,
+                '제원관리번호(형식승원번호)' ,'길이' ,'너비' ,'높이' ,'총중량' ,'배기량' ,'정격출력' ,'승차정원' ,
+                '최대적재량' ,'기통수' ,'연료의 종류'  ]
+        self.ocr_data_frame = pd.DataFrame(columns=self.ocr_columns)
+
+        self.ocr_data_frame.loc[0]= data
+
+        if save_csv == True:
+            self.ocr_data_frame.to_csv("./result.csv")
+
+        return self.ocr_data_frame
 
 
 

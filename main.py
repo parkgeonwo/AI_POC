@@ -1,17 +1,14 @@
-
-from imageio import save
 from Car_document_ocr import OCR
 
+car_ocr = OCR( upload_image_path="./document/car_document3.jpg" )
 
-car_ocr = OCR( upload_image_path="./document/car_document.jpg" )
+car_ocr.crop_image_save(save_path = "./crop_image/",show_image=True)
 
-car_ocr.crop_image_save(save_path = "./crop_image/",show_image=False)
+# data =  car_ocr.ocr_data_save(image_path = "./crop_image/", ocr_type="easyocr") 
+# print(data)
 
-data =  car_ocr.ocr_data_save(image_path = "./crop_image/", ocr_type="easyocr") 
-print(data)
-
-df = car_ocr.save_csv(data,save_csv=True)
-print(df)
+# df = car_ocr.save_csv(data,save_csv=True)
+# print(df)
 
 # import pandas as pd
 

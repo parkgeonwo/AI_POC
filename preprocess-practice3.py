@@ -20,11 +20,15 @@ def biggest_contour(contours):
 ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
 
 upload_image = cv2.imread("./document/car_document3.jpg")
-upload_image = cv2.resize( upload_image, None, fx = 1.5, fy = 1.5, interpolation = cv2.INTER_LANCZOS4 )
+
+upload_image_height,upload_image_width, c = upload_image.shape
+
+if upload_image_height < 1000 or upload_image_width < 1000:
+    upload_image = cv2.resize( upload_image, None, fx = 1.5, fy = 1.5, interpolation = cv2.INTER_LANCZOS4 )
+    # upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 
 upload_image = cv2.cvtColor(upload_image, cv2.COLOR_BGR2GRAY)
 
-# upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 frame_height,frame_width = upload_image.shape
 
 ret, binary_image = cv2.threshold(upload_image, 240, 255, cv2.THRESH_BINARY)   # 이진화
@@ -147,12 +151,15 @@ for k in range(n):
     elif k == 2:
         break
 
+    # print(height_list)
+
     for j in range(len(height_list)):
         small_rect_list2 = [small_rect_list[i] for i in range(len(small_rect_list)) if small_rect_list[i][0][1] >= height_list[j] and small_rect_list[i][0][1] <= height_list[j+1] ]
         small_rect_list2.sort(key=lambda tup: tup[0][0])
         for i in small_rect_list2:
             small_rect_list3.append(i)
 
+    # print(len(small_rect_list3))
 
 
     #################### m번 박스 추출
@@ -179,15 +186,18 @@ for k in range(n):
             W = rect[1][0]
             H = rect[1][1]
 
+        print(W,H)
+
         if W > 30 and H >30:
 
             crop_image2 = cv2.cvtColor(crop_image, cv2.COLOR_GRAY2BGR)
             cv2.drawContours(crop_image2, [box2], -1, (255,0,0), 2)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
             cv2.imshow("crop_image2", crop_image2)
 
-            OCR_crop_image = crop_image2[ box2[1][1] : box2[1][1] + int(H) , box2[1][0] : box2[1][0] + int(W) ]
-            cv2.imshow("OCR_crop_image_{}".format(image_number), OCR_crop_image)
-            # cv2.imwrite("./example/OCR_crop_image_{}.png".format(image_number), OCR_crop_image)
+            OCR_crop_image = crop_image2[ box2[1][1] : box2[1][1] + math.ceil(H) , box2[1][0] : box2[1][0] + math.ceil(W) ]
+            print(OCR_crop_image.shape)
+            cv2.imshow("OCR_crop_image_{}_{}".format(k,image_number), OCR_crop_image)
+            cv2.imwrite("./example/OCR_crop_image_{}_{}.png".format(k,image_number), OCR_crop_image)
             image_number += 1
 
         cv2.waitKey(0)

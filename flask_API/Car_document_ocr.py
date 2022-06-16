@@ -175,8 +175,7 @@ class OCR():
                 small_rect_list2.sort(key=lambda tup: tup[0][0])
                 for i in small_rect_list2:
                     small_rect_list3.append(i)
-            
-            # print(small_box_height_list)
+        
 
 
             #################### m번 박스 추출
@@ -268,12 +267,10 @@ class OCR():
 
                 for k in box_num_list:
                     path = self.image_path + "OCR_crop_image_"+str(i)+"_"+str(k)+".png"
-                    # result = reader.readtext(path)
-                    image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-                    ret, binary_image = cv2.threshold(image, 210, 255, cv2.THRESH_BINARY)   # 이진화
-                    # blur
-                    gblur_image = cv2.GaussianBlur(binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능
-                    result = reader.readtext(gblur_image)
+                    result = reader.readtext(path)
+                    # image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                    # ret, binary_image = cv2.threshold(image, 220, 255, cv2.THRESH_BINARY)   # 이진화
+                    # result = reader.readtext(binary_image)
 
                     ocr_word_list = []
 

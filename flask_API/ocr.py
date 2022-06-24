@@ -98,15 +98,15 @@ def main():
 def upload_file():
     # check if the post request has the file part
     if "upload_image" not in request.files:
-        resp = jsonify({'message' : 'No file part in the request'})
+        resp = jsonify({'code':'400','message' : 'No file part in the request'})
         resp.status_code = 400
         return resp
-
+ 
     # files = request.files.getlist('files[]')
     file = request.files["upload_image"]
     
     if file.filename == '':
-        resp = jsonify({'message': 'No image selected for uploading'})
+        resp = jsonify({'code':'400','message': 'No image selected for uploading'})
         resp.status_code = 400
         return resp
 
@@ -116,10 +116,10 @@ def upload_file():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))    # 업로드한 이미지를 저장
 
         ### ocr
-        upload_image_path = "./flask/flaskapp/static/uploads/"
+        upload_image_path = './flask_API/static/uploads/'
         car_ocr = OCR( upload_image_path=upload_image_path + filename )
         car_ocr.crop_image_save(save_path = upload_image_path + "crop_image/" ,show_image=False)
         ocr_data =  car_ocr.ocr_data_save(image_path = upload_image_path + "crop_image/", ocr_type="easyocr")
@@ -148,7 +148,7 @@ def upload_file():
     if success:
         # resp = jsonify({'message' : 'Files successfully uploaded'})
         # resp = json.dumps({'message' : 'No file part in the request'})
-        resp = jsonify({'message' : 'Files successfully uploaded', 'ocr_result_dict' : ocr_result_dict})
+        resp = jsonify({'code':'201','message' : 'Files successfully uploaded', 'ocr_result_dict' : ocr_result_dict})
         resp.status_code = 201
         return resp
     else:

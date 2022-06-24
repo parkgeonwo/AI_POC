@@ -47,9 +47,6 @@ class OCR():
                     [0, 0.0513, 0.1099, 0.1526, 0.1954, 0.2357, 0.2772, 0.3541, 0.419,1 ],   # 가장 큰 박스 3개중 2번째 박스의 높이 리스트
                     None ]  # 가장 큰 박스 3개중 3번째 박스의 높이 리스트 
 
-
-
-
     # 사이즈 순으로 box추출하기 위한 함수
     def biggest_contour(self, contours):
         biggest = np.array([])
@@ -63,8 +60,6 @@ class OCR():
                     biggest = approx
                     max_area = area
         return biggest
-
-
 
     # 이미지를 crop하고 저장하는 함수
     def crop_image_save(self, save_path, show_image = False ):

@@ -16,7 +16,7 @@ class OCR():
         self.upload_image_height,self.upload_image_width, c = self.upload_image.shape
 
         if self.upload_image_height < 1000 or self.upload_image_width < 1000: 
-            self.upload_image = cv2.resize(self.upload_image, dsize=(1240, 1755), interpolation=cv2.INTER_AREA)
+            self.upload_image = cv2.resize(self.upload_image, dsize=(1240, 1755), interpolation=cv2.INTER_LANCZOS4)
 
         # 업로드 이미지가 작을때 1.5배 확대
         # self.extend_size = 1
@@ -32,7 +32,7 @@ class OCR():
         self.frame_height,self.frame_width = self.upload_image_gray.shape
 
         # binary
-        ret, self.binary_image = cv2.threshold(self.upload_image_gray, 240, 255, cv2.THRESH_BINARY)   # 이진화
+        ret, self.binary_image = cv2.threshold(self.upload_image_gray, 230, 255, cv2.THRESH_BINARY)   # 이진화
 
         # blur
         self.gblur_image = cv2.GaussianBlur(self.binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능

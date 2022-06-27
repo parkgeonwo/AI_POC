@@ -19,7 +19,7 @@ def biggest_contour(contours):
 
 ############## 이미지 전처리 (이미지 업로드, 이진화, blur, canny )
 
-upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document.jpg", cv2.IMREAD_GRAYSCALE)
+upload_image = cv2.imread("/home/matrix/Desktop/code/AI_POC/document/car_document_0621_1.jpg", cv2.IMREAD_GRAYSCALE)
 # upload_image = cv2.resize( upload_image, None, fx = 0.7, fy = 0.7, interpolation = cv2.INTER_AREA )
 frame_height,frame_width = upload_image.shape
 

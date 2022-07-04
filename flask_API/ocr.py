@@ -1,74 +1,3 @@
-# #app.py
-# from flask import Flask, json, request, jsonify
-# import os
-# import urllib.request
-# from werkzeug.utils import secure_filename
- 
-# app = Flask(__name__)
- 
-# app.secret_key = "secret_key"
- 
-# # UPLOAD_FOLDER = './static/uploads'
-# UPLOAD_FOLDER = './flask_API/static/uploads/'
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# # app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
- 
-# ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
- 
-# def allowed_file(filename):
-#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
- 
-# @app.route('/')
-# def main():
-#     return 'Homepage'
- 
-# @app.route('/upload', methods=['POST'])
-# def upload_file():
-#     # check if the post request has the file part
-#     if 'upload_image' not in request.files:
-#         resp = jsonify({'message' : 'No file part in the request'})
-#         resp.status_code = 400
-#         return resp
-
-#     file = request.files['upload_image']
-
-# 	if file.filename == '':           # filename이 ''라면
-# 		resp = jsonify({'message' : 'No image selected for uploading'})
-#         resp.status_code = 400
-#         return resp
-
-#     errors = {}
-#     success = False
-
-# 	if file and allowed_file(file.filename):
-# 		filename = secure_filename(file.filename)
-# 		file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-# 		success = True
-# 	else:
-# 		errors[file.filename] = 'File type is not allowed'
- 
-#     if success and errors:
-#         errors['message'] = 'File(s) successfully uploaded'
-#         resp = jsonify(errors)
-#         resp.status_code = 500
-#         return resp
-#     if success:
-#         resp = jsonify({'message' : 'Files successfully uploaded'})
-#         resp.status_code = 201
-#         return resp
-#     else:
-#         resp = jsonify(errors)
-#         resp.status_code = 500
-#         return resp
- 
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
-
-
-
-
-
 #app.py
 from flask import Flask, json, request, jsonify
 import os
@@ -118,25 +47,40 @@ def upload_file():
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))    # 업로드한 이미지를 저장
 
-        ### ocr
-        upload_image_path = './flask_API/static/uploads/'
-        car_ocr = OCR( upload_image_path=upload_image_path + filename )
-        car_ocr.crop_image_save(save_path = upload_image_path + "crop_image/" ,show_image=False)
-        ocr_data =  car_ocr.ocr_data_save(image_path = upload_image_path + "crop_image/", ocr_type="easyocr")
-        df = car_ocr.save_csv(ocr_data,save_csv=True)
+        upload_image_path = "./flask/flaskapp/static/uploads/"
+        car_ocr = OCR(upload_image_path=upload_image_path+filename)
+        car_ocr.img_process()
+        ocr_result = car_ocr.ocr_process()
 
-        ocr_columns = car_ocr.ocr_columns    # columns의 이름 전달
-
-        columns_length_list = []             # columns의 번호 전달
+        ocr_columns = car_ocr.ocr_columns  # columns의 이름 전달
+        columns_length_list = []           # columns의 번호 전달
         for i in range( len(ocr_columns) ):
             columns_length_list.append(i)
-        
-        easyocr_list = car_ocr.easyocr_list  # easyocr 결과 전달
 
         for i in range(len(ocr_columns)):
-            ocr_result_dict[ocr_columns[i]] = easyocr_list[i]
+            ocr_result_dict[ocr_columns[i]] = ocr_result[i]
         
         success = True
+
+        # ### ocr
+        # upload_image_path = './flask_API/static/uploads/'
+        # car_ocr = OCR( upload_image_path=upload_image_path + filename )
+        # car_ocr.crop_image_save(save_path = upload_image_path + "crop_image/" ,show_image=False)
+        # ocr_data =  car_ocr.ocr_data_save(image_path = upload_image_path + "crop_image/", ocr_type="easyocr")
+        # df = car_ocr.save_csv(ocr_data,save_csv=True)
+
+        # ocr_columns = car_ocr.ocr_columns    # columns의 이름 전달
+
+        # columns_length_list = []             # columns의 번호 전달
+        # for i in range( len(ocr_columns) ):
+        #     columns_length_list.append(i)
+        
+        # easyocr_list = car_ocr.easyocr_list  # easyocr 결과 전달
+
+        # for i in range(len(ocr_columns)):
+        #     ocr_result_dict[ocr_columns[i]] = easyocr_list[i]
+        
+        # success = True
     else:
         errors[file.filename] = 'File type is not allowed'
  

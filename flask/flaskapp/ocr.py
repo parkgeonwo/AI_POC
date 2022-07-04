@@ -42,23 +42,17 @@ def upload_image():
 		# print('upload_image filename: ' + filename)
 		flash('Upload Image')
 
-		### ocr
 		upload_image_path = "./flask/flaskapp/static/uploads/"
-		car_ocr = OCR( upload_image_path=upload_image_path + filename )
-		car_ocr.crop_image_save(save_path = upload_image_path + "crop_image/" ,show_image=False)
-		ocr_data =  car_ocr.ocr_data_save(image_path = upload_image_path + "crop_image/", ocr_type="easyocr")
-		df = car_ocr.save_csv(ocr_data,save_csv=True)
-		# print(data)
-
+		car_ocr = OCR(upload_image_path=upload_image_path+filename)
+		car_ocr.img_process()
+		ocr_result = car_ocr.ocr_process()
 		ocr_columns = car_ocr.ocr_columns    # columns의 이름 전달
-
 		columns_length_list = []             # columns의 번호 전달
+
 		for i in range( len(ocr_columns) ):
 			columns_length_list.append(i)
-		
-		easyocr_list = car_ocr.easyocr_list  # easyocr 결과 전달
 
-		return render_template('index.html', filename=filename, easyocr_list=easyocr_list, ocr_columns=ocr_columns,
+		return render_template('index.html', filename=filename, easyocr_list=ocr_result, ocr_columns=ocr_columns,
 								columns_length_list=columns_length_list )     # filename을 index.html에 전달
 
 	else:
@@ -69,8 +63,6 @@ def upload_image():
 def display_image(filename):
 	# print('display_image filename: ' + filename)
 	return redirect(url_for('static', filename='uploads/' + filename), code=301)
-
-
 
 if __name__ == "__main__":
     app.run(host = "0.0.0.0")   # 127.0.0.1 == localhost

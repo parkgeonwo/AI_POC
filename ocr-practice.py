@@ -397,22 +397,39 @@
 import cv2
 import easyocr
 
-reader = easyocr.Reader(['ko', 'en'])
-upload_image_path="/home/matrix-5/Desktop/code/AI_POC/crop_image/ocr_crop_image_0_20.png"
+sr = cv2.dnn_superres.DnnSuperResImpl_create()
+sr.readModel('./model/ESPCN_x2.pb')
+sr.setModel("espcn", 2)
+upload_image_path="/home/matrix-5/Desktop/code/AI_POC/document/car_document3.jpg"
 upload_image = cv2.imread(upload_image_path)
 
-ret, binary_image = cv2.threshold(upload_image, 230, 255, cv2.THRESH_BINARY)   # 이진화
-# blur
-gblur_image = cv2.GaussianBlur(binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능
+result = sr.upsample(upload_image)
+resized_img = cv2.resize(upload_image, dsize=None, fx=2, fy=2)
 
-# cv2.imshow("OCR_crop_image", gblur_image)
+cv2.imshow('img', upload_image)
+cv2.imshow('resized_img', resized_img)
+cv2.imshow('result', result)
+cv2.waitKey(0)
+
+
+
+# reader = easyocr.Reader(['ko', 'en'])
+# upload_image_path="/home/matrix-5/Desktop/code/AI_POC/crop_image/ocr_crop_image_1_19.png"
+# upload_image = cv2.imread(upload_image_path)
+# gray_img = cv2.cvtColor(upload_image, cv2.COLOR_RGB2GRAY)
+# ret, binary_image = cv2.threshold(gray_img, 230, 255, cv2.THRESH_BINARY)   # 이진화
+# # ret, binary_image = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+# # blur
+# gblur_image = cv2.GaussianBlur(binary_image, (3,3), 0)      # 전체적으로 밀도가 동일한 노이즈, 백색 노이즈를 제거하는 기능
+
+# # cv2.imshow("OCR_crop_image", gblur_image)
+# # cv2.waitKey(0)
+# # cv2.destroyAllWindows()
+
+# result = reader.readtext(gblur_image)
+# print(result)
+
+# cv2.imshow("upload_image", gblur_image)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
-
-result = reader.readtext(gblur_image)
-print(result)
-
-cv2.imshow("upload_image", upload_image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
 

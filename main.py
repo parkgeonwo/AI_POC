@@ -9,6 +9,7 @@ import pandas as pd
 class OCR():
     def __init__(self,upload_image_path):
         self.img = cv2.imread(upload_image_path)
+        self.upload_image_height,self.upload_image_width, c = self.img.shape
 
         # 가장 큰 box 몇개 추출할지 지정
         self.detect_large_box_num = 3
@@ -20,10 +21,20 @@ class OCR():
             None ]  # 가장 큰 박스 3개중 3번째 박스의 높이 리스트 
 
         self.crop_img_save_path = "./crop_image/"
+        self.img_height,self.img_width, c = self.img.shape
 
 
     def img_process(self):
-        img_height,img_width, c = self.img.shape
+
+        sr = cv2.dnn_superres.DnnSuperResImpl_create()
+        sr.readModel('./model/ESPCN_x2.pb')
+        sr.setModel("espcn", 2)
+
+        if self.img_height < 1000 or self.img_width < 1000: 
+            self.img = sr.upsample(self.img)
+
+        self.img_height,self.img_width, c = self.img.shape
+
         gray_img = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
         gblur_img = cv2.GaussianBlur(gray_img,(5,5),0)
         canny_img = cv2.Canny(gblur_img, 75,200, True)
@@ -43,20 +54,23 @@ class OCR():
 
         large_box_list = []    # 큰 box 3개 좌표 담을 list
 
+        size_control_num = 2
+
         for i in range(self.detect_large_box_num):
             reshape_size_x, reshape_size_y = large_box_cnts[i].shape[0],large_box_cnts[i].shape[2]   # reshape할 size 정의
             points = large_box_cnts[i].reshape(reshape_size_x, reshape_size_y)             # reshape
             large_input_points = np.zeros((4,2), dtype = "float32")                    # 틀 만들어 놓기
 
             points_sum = points.sum(axis = 1)
-            large_input_points[0] = points[np.argmin(points_sum)]   # top left
-            large_input_points[3] = points[np.argmax(points_sum)]   # bottom right
+            large_input_points[0] = points[np.argmin(points_sum)] -size_control_num   # top left
+            large_input_points[3] = points[np.argmax(points_sum)] +size_control_num  # bottom right
 
             points_diff = np.diff(points, axis=1)
-            large_input_points[1] = points[np.argmin(points_diff)]   # top right
-            large_input_points[2] = points[np.argmax(points_diff)]   # bottom left
+            large_input_points[1] = points[np.argmin(points_diff)] + np.array([+size_control_num,-size_control_num])  # top right
+            large_input_points[2] = points[np.argmax(points_diff)] + np.array([-size_control_num,+size_control_num])  # bottom left
 
             large_box_list.append(large_input_points)
+
 
         self.large_box_top_left_masking = large_box_list[0][0]     # 첫번째 박스의 좌상단 box 좌표
         # print(self.large_box_top_left_masking)
@@ -65,7 +79,7 @@ class OCR():
         large_box_list3 = []
 
         # 큰 box들의 중심 좌표를 구분할 높이 리스트
-        large_box_height_list = [ i*img_height for i in self.box_center_list[0] ]
+        large_box_height_list = [ i*self.img_height for i in self.box_center_list[0] ]
 
         # 같은 높이 범위에 있는 box들을 large_box_list2에 담고 좌측->우측으로 정렬한다음 
         # 들어있는 box들을 large_box_list3에 append
@@ -100,9 +114,19 @@ class OCR():
 
             ################## k번째 큰박스(crop_image)안에서 작은 박스찾기
             crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-            ret, small_binary_image = cv2.threshold(crop_img, 240, 255, cv2.THRESH_BINARY)   # 이진화
+            # ret, binary_crop_img = cv2.threshold(crop_img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            # ret, binary_crop_img = cv2.threshold(crop_img, 240, 255, cv2.THRESH_BINARY)   # 이진화
+            binary_crop_img = cv2.adaptiveThreshold(crop_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 25,4)   # 이진화
+            gblur_crop_img = cv2.GaussianBlur(binary_crop_img,(5,5),0)
+            canny_crop_img = cv2.Canny(gblur_crop_img, 50,100, True)
+            # ret, binary_crop_img = cv2.threshold(canny_crop_img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            # ret, small_binary_image = cv2.threshold(crop_img, 240, 255, cv2.THRESH_BINARY)   # 이진화
 
-            small_box_cnts, hierarchy = cv2.findContours(small_binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
+            cv2.imshow("crop_img", binary_crop_img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+            small_box_cnts, hierarchy = cv2.findContours(binary_crop_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   # image / mode / method
             small_box_cnts = sorted(small_box_cnts, key=cv2.contourArea, reverse=True) # contourArea : contour가 그린 면적
             crop_img = cv2.cvtColor(crop_img, cv2.COLOR_GRAY2BGR)
 
@@ -150,38 +174,45 @@ class OCR():
                     W = rect[1][0]
                     H = rect[1][1]
 
-                if W > (crop_max_width*3/100) and H >(crop_max_height*3/100) and W>H:
+                if W > (crop_max_width*3/100) and H >(crop_max_height*3/100) and W>H and H <(crop_max_height*60/100):
+                    ## 너무 작은/큰 box는 제외 , 가로가 더 긴거만
 
                     if k == 0 and image_num == 20:      # masking을 위한 주민등록이 포함된 box의 top left 좌표 더해주기
                         # print(box2[1])
                         self.large_box_top_left_masking += box2[1]
                         # print(self.large_box_top_left_masking)
+                    
+                    if image_num == 0 and W > (crop_max_width*90/100):
+                        cv2.drawContours(crop_img, [box2], -1, (255,0,0), 1)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
+                        ocr_crop_image = crop_img[ box2[1][1] : box2[1][1] + math.ceil(H) , box2[1][0] : box2[1][0] + math.ceil(W) ]
 
-                    cv2.drawContours(crop_img, [box2], -1, (255,0,0), 1)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
-                    ocr_crop_image = crop_img[ box2[1][1] : box2[1][1] + math.ceil(H) , box2[1][0] : box2[1][0] + math.ceil(W) ]
+                    else:
+                        cv2.drawContours(crop_img, [box2], -1, (255,0,0), 1)      # img / 좌표 / 외곽선 index, -1하면 모든 외곽선 그리기 / 색 / 굵기
+                        ocr_crop_image = crop_img[ box2[1][1] : box2[1][1] + math.ceil(H) , box2[1][0] : box2[1][0] + math.ceil(W) ]
 
                     cv2.imwrite(self.crop_img_save_path+"ocr_crop_image_{}_{}.png".format(k,image_num), ocr_crop_image)
 
-                    # cv2.imshow("crop_img", crop_img)
-                    # cv2.imshow("OCR_crop_image_{}_{}".format(k,image_num), ocr_crop_image)
-
                     image_num += 1
 
+                    # if k == 0:
                     # 하나하나 띄우기
-                    # cv2.waitKey(0)
-                    # cv2.destroyAllWindows()
+                    cv2.imshow("crop_img", crop_img)
+                    cv2.imshow("OCR_crop_image_{}_{}".format(k,image_num), ocr_crop_image)
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
 
 
     # ocr 결과 data를 저장
-    def ocr_process(self,ocr_type = 2):
+    def ocr_process(self,ocr_type = 1):
         # image가 들어있는 path / ocr 적용 엔진 지정
 
         # crop box num list 지정
         self.box1_ocr_num_list = [0,2,4,6,8,10,12,14,16,18,20,22 ]
         self.box2_ocr_num_list = [1,3,5,7,9,11,13,15,17,19,21]
-        ocr_list = []
+        ocr_list_type1 = []
+        ocr_list_type2 = []
 
-        ### tesseeract ocr
+        ### type1 ocr
         if ocr_type == 1:
             for i in range(2):
                 if i == 0:
@@ -202,11 +233,11 @@ class OCR():
                     result = result.replace(" ","")
                     result = result.replace("\n"," ")
 
-                    ocr_list.append(result)
+                    ocr_list_type1.append(result)
 
-            ocr_result_list = ocr_list
+            ocr_result_list = ocr_list_type1
 
-        ##### easyocr ocr
+        ##### type2 ocr
         if ocr_type == 2:
             reader = easyocr.Reader(['ko', 'en'])
 
@@ -247,10 +278,10 @@ class OCR():
                             # cv2.imwrite("masking_img.jpg",self.masking_img)  # masking img 저장하기
                             cv2.waitKey(0)
                             cv2.destroyAllWindows()
-                    ocr_list.append(ocr_word_list)
+                    ocr_list_type2.append(ocr_word_list)
 
-            # easyocr을 ocr각 값들을 list로 반환하기 때문에 하나의 string으로 바꿔서 ocr_list2에 저장
-            ocr_list2 = []
+            # easyocr을 ocr각 값들을 list로 반환하기 때문에 하나의 string으로 바꿔서 ocr_list2_type2에 저장
+            ocr_list2_type2 = []
 
             def sum_string(sum_list):
                 sum_str=''
@@ -258,11 +289,11 @@ class OCR():
                     sum_str += sum_list[i] + ' '
                 return sum_str
 
-            for i in ocr_list:
+            for i in ocr_list_type2:
                 sum_str = sum_string(i)
-                ocr_list2.append(sum_str)
+                ocr_list2_type2.append(sum_str)
 
-            ocr_result_list = ocr_list2
+            ocr_result_list = ocr_list2_type2
 
         # ocr결과 데이터를 csv파일로 저장
         self.ocr_columns = [ 'info' , '자동차등록번호' , '차종' ,'용도' ,'차명' ,'형식 및 모델연도' ,'차대번호' ,'원동기형식' ,
@@ -277,11 +308,11 @@ class OCR():
         return ocr_result_list
 
 
-upload_image_path = "/home/matrix-5/Desktop/code/AI_POC/document/car_document.jpg"
+upload_image_path = "/home/matrix-5/Desktop/code/AI_POC/document/car_document_0621_8.jpg"
 car_ocr = OCR(upload_image_path)
 car_ocr.img_process()
-ocr_result = car_ocr.ocr_process()
-print(ocr_result)
+# ocr_result = car_ocr.ocr_process()
+# print(ocr_result)
 
 
 

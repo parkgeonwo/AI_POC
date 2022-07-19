@@ -3,13 +3,12 @@ from flask import Flask, json, request, jsonify
 import os
 import urllib.request
 from werkzeug.utils import secure_filename
-from Car_document_ocr import OCR
+from Document_ocr import OCR
  
 app = Flask(__name__)
  
 app.secret_key = "secret_key"
  
-# UPLOAD_FOLDER = './static/uploads'
 UPLOAD_FOLDER = './flask_API/static/uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -47,9 +46,11 @@ def upload_file():
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))    # 업로드한 이미지를 저장
 
-        upload_image_path = "./flask/flaskapp/static/uploads/"
+        upload_image_path = "./flask_API/static/uploads/"
+        file_save_path = "./flask_API/static/"
+        
         car_ocr = OCR(upload_image_path=upload_image_path+filename)
-        car_ocr.img_process()
+        car_ocr.img_process(file_save_path=file_save_path)
         ocr_result = car_ocr.ocr_process()
 
         ocr_columns = car_ocr.ocr_columns  # columns의 이름 전달
@@ -62,25 +63,6 @@ def upload_file():
         
         success = True
 
-        # ### ocr
-        # upload_image_path = './flask_API/static/uploads/'
-        # car_ocr = OCR( upload_image_path=upload_image_path + filename )
-        # car_ocr.crop_image_save(save_path = upload_image_path + "crop_image/" ,show_image=False)
-        # ocr_data =  car_ocr.ocr_data_save(image_path = upload_image_path + "crop_image/", ocr_type="easyocr")
-        # df = car_ocr.save_csv(ocr_data,save_csv=True)
-
-        # ocr_columns = car_ocr.ocr_columns    # columns의 이름 전달
-
-        # columns_length_list = []             # columns의 번호 전달
-        # for i in range( len(ocr_columns) ):
-        #     columns_length_list.append(i)
-        
-        # easyocr_list = car_ocr.easyocr_list  # easyocr 결과 전달
-
-        # for i in range(len(ocr_columns)):
-        #     ocr_result_dict[ocr_columns[i]] = easyocr_list[i]
-        
-        # success = True
     else:
         errors[file.filename] = 'File type is not allowed'
  

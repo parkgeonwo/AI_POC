@@ -258,7 +258,6 @@ class OCR():
 
                 ocr_list_type1.append(result)
 
-
                 ##### type2 ocr
                 type2_text = reader.readtext(crop_image)
 
@@ -332,13 +331,13 @@ class OCR():
 
         ocr_data_frame.to_csv("./result.csv")
 
-        return ocr_result_list2, self.masking_img
+        return ocr_result_list2
 
 
 upload_image_path = "/home/matrix-5/Desktop/code/AI_POC/document/car_document.jpg"
 car_ocr = OCR(upload_image_path)
 car_ocr.img_process()
-ocr_result, mask_img = car_ocr.ocr_process()
+ocr_result = car_ocr.ocr_process()
 print(ocr_result)
 
 

@@ -229,7 +229,7 @@ class OCR():
         ocr_list_type1 = []
         ocr_list_type2 = []
         ocr_result_list=[]
-        reader = easyocr.Reader(['ko', 'en'])
+        reader = easyocr.Reader(['ko','en'])
 
         ### type1+type2 ocr
         for i in range(2):
@@ -315,11 +315,12 @@ class OCR():
             ocr_result_list.append(result_list)
 
         ocr_result_list2 = []
-        for i in ocr_result_list:
+        for i in range(result_len):
             if i == 1:
-                ocr_result_list2.append(i[0])
+                ocr_result_list2.append(ocr_result_list[i][0])
+                print(i)
             else:
-                ocr_result_list2.append(i[1])
+                ocr_result_list2.append(ocr_result_list[i][1])
 
         # ocr결과 데이터를 csv파일로 저장
         self.ocr_columns = [ 'info' , '자동차등록번호' , '차종' ,'용도' ,'차명' ,'형식 및 모델연도' ,'차대번호' ,'원동기형식' ,

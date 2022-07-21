@@ -318,15 +318,18 @@ class OCR():
         for i in range(result_len):
             if i == 1:
                 ocr_result_list2.append(ocr_result_list[i][0])
-                print(i)
             else:
                 ocr_result_list2.append(ocr_result_list[i][1])
+
+        if ocr_result_list2[20] == '':
+            ocr_result_list2[20] = '0'
 
         # ocr결과 데이터를 csv파일로 저장
         self.ocr_columns = [ 'info' , '자동차등록번호' , '차종' ,'용도' ,'차명' ,'형식 및 모델연도' ,'차대번호' ,'원동기형식' ,
                 '사용본거지' ,'성명(명칭)' ,'주민(법인)등록번호' ,'주소' ,
                 '제원관리번호(형식승원번호)' ,'길이' ,'너비' ,'높이' ,'총중량' ,'배기량' ,'정격출력' ,'승차정원' ,
                 '최대적재량' ,'기통수' ,'연료의 종류'  ]
+
         ocr_data_frame = pd.DataFrame(columns=self.ocr_columns)
         ocr_data_frame.loc[0]= ocr_result_list2
 
